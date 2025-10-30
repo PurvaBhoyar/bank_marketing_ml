@@ -38,8 +38,7 @@ st.sidebar.metric("Accuracy", f"{best_accuracy:.2%}")
 st.sidebar.metric("F1-Score", f"{best_f1:.4f}")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### ⚙️ Model Configuration")
-st.sidebar.info("**Decision Strategy:** Conservative threshold optimized for precision")
+
 
 # Helper function for encoding categorical features
 def encode_cat(val, feat):
@@ -244,14 +243,7 @@ else:
         - Handles complex non-linear relationships
         """)
     
-    with col2:
-        st.warning("""
-        **Dataset Challenge:**
-        - Highly imbalanced: 88% "No", 12% "Yes"
-        - Model optimized for real-world deployment
-        - Conservative predictions minimize false positives
-        - Focus on precision over aggressive recall
-        """)
+    s
 
     st.markdown("---")
     st.subheader("🥇 Model Rankings (by F1-Score)")
