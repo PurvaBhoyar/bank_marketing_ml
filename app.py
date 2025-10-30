@@ -10,13 +10,11 @@ st.set_page_config(page_title="Bank Marketing AI", page_icon="🏦", layout="wid
 
 # Load everything
 try:
-    best_model = joblib.load('best_model_balanced.pkl')
-
+    best_model = joblib.load('best_model.pkl')
     scaler = joblib.load('scaler.pkl')
     label_encoders = joblib.load('label_encoders.pkl')
     comparison_df = pd.read_csv('model_comparison.csv')
     
-    # Find best model name
     best_model_name = comparison_df.loc[comparison_df['F1-Score'].idxmax(), 'Model']
     best_accuracy = comparison_df.loc[comparison_df['F1-Score'].idxmax(), 'Accuracy']
     best_f1 = comparison_df.loc[comparison_df['F1-Score'].idxmax(), 'F1-Score']
@@ -91,74 +89,68 @@ if page == "🔮 Prediction":
     
     if st.button("🚀 PREDICT SUBSCRIPTION", type="primary", use_container_width=True):
         try:
-            # Encode
             enc = {k: encode_cat(v, k) for k, v in data.items()}
             df_inp = pd.DataFrame([enc])
             df_sc = scaler.transform(df_inp)
             
-            # Predict with probability
             pred_raw = best_model.predict(df_sc)[0]
             prob = best_model.predict_proba(df_sc)[0]
             
-            # THRESHOLD TUNING - Adjust to 0.25 for better YES predictions
             THRESHOLD = 0.20
-            if prob[1] > THRESHOLD:
-                pred = 1
-            else:
-                pred = 0
+            subscribe_prob = prob[1]
+            not_subscribe_prob = prob[0]
+            
+            pred = 1 if subscribe_prob > THRESHOLD else 0
             
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # Result box
             if pred == 1:
                 st.success(f"### ✅ CUSTOMER WILL SUBSCRIBE")
-                st.markdown(f"**Model Used:** {best_model_name}")
-                st.markdown(f"**Subscription Probability:** {prob[1]:.1%}")
             else:
                 st.error(f"### ❌ CUSTOMER WON'T SUBSCRIBE")
-                st.markdown(f"**Model Used:** {best_model_name}")
-                st.markdown(f"**Subscription Probability:** {prob[1]:.1%}")
             
+            st.markdown(f"**Model Used:** {best_model_name}")
+            st.markdown(f"**Subscription Probability:** {subscribe_prob:.1%}")
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # Metrics
             c1, c2, c3 = st.columns(3)
             with c1:
                 st.metric("Model Used", best_model_name)
             with c2:
-                st.metric("Won't Subscribe", f"{prob[0]:.1%}")
+                st.metric("Won't Subscribe", f"{not_subscribe_prob:.1%}")
             with c3:
-                st.metric("Will Subscribe", f"{prob[1]:.1%}")
+                st.metric("Will Subscribe", f"{subscribe_prob:.1%}")
             
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # Gauge chart
             fig = go.Figure(go.Indicator(
                 mode="gauge+number+delta",
-                value=prob[1] * 100,
+                value=subscribe_prob * 100,
                 title={'text': "Subscription Probability (%)"},
-                delta={'reference': 25},
+                delta={'reference': THRESHOLD * 100},
                 gauge={
                     'axis': {'range': [0, 100]},
                     'bar': {'color': "darkblue"},
                     'steps': [
-                        {'range': [0, 25], 'color': "lightcoral"},
-                        {'range': [25, 60], 'color': "lightyellow"},
+                        {'range': [0, THRESHOLD * 100], 'color': "lightcoral"},
+                        {'range': [THRESHOLD * 100, 60], 'color': "lightyellow"},
                         {'range': [60, 100], 'color': "lightgreen"}
                     ],
                     'threshold': {
                         'line': {'color': "red", 'width': 4},
                         'thickness': 0.75,
-                        'value': 25
+                        'value': THRESHOLD * 100
                     }
                 }
             ))
             fig.update_layout(height=400)
             st.plotly_chart(fig, use_container_width=True)
             
-            # Bar chart
             fig2 = px.bar(
-                pd.DataFrame({'Outcome': ['Won\'t Subscribe', 'Will Subscribe'], 'Probability': [prob[0], prob[1]]}),
+                pd.DataFrame({
+                    'Outcome': ['Won\'t Subscribe', 'Will Subscribe'],
+                    'Probability': [not_subscribe_prob, subscribe_prob]
+                }),
                 x='Outcome', y='Probability',
                 color='Outcome',
                 color_discrete_map={'Won\'t Subscribe': '#dc3545', 'Will Subscribe': '#28a745'},
@@ -168,7 +160,7 @@ if page == "🔮 Prediction":
             fig2.update_layout(showlegend=False, xaxis_title="", yaxis_title="Probability")
             st.plotly_chart(fig2, use_container_width=True)
             
-            st.info(f"**Note:** Prediction threshold is set to {THRESHOLD*100:.0f}%. This means YES is predicted when subscription probability exceeds {THRESHOLD*100:.0f}%.")
+            st.info(f"**Note:** Prediction threshold is set to {THRESHOLD*100:.0f}%. 'Will Subscribe' is predicted only when subscription probability exceeds {THRESHOLD*100:.0f}%.")
             
         except Exception as e:
             st.error(f"❌ Prediction Error: {e}")
@@ -183,7 +175,6 @@ else:
     st.markdown(f"### Comparison of All {len(comparison_df)} Models")
     st.markdown("---")
     
-    # Best model highlight
     st.subheader("🏆 Best Performing Model")
     
     col1, col2, col3, col4, col5 = st.columns(5)
@@ -200,7 +191,6 @@ else:
     
     st.markdown("---")
     
-    # Performance table
     st.subheader("📋 All Models Performance Metrics")
     
     styled_df = comparison_df.style.highlight_max(
@@ -218,7 +208,6 @@ else:
     
     st.markdown("---")
     
-    # Charts
     st.subheader("📈 Performance Comparison Charts")
     
     c1, c2 = st.columns(2)
@@ -312,7 +301,6 @@ else:
         fig.update_layout(xaxis_title="Recall", yaxis_title="Precision")
         st.plotly_chart(fig, use_container_width=True)
     
-    # Model ranking
     st.markdown("---")
     st.subheader("🥇 Model Rankings (by F1-Score)")
     
@@ -322,7 +310,5 @@ else:
     
     st.table(ranking.style.format({'F1-Score': '{:.4f}'}))
 
-# Footer
 st.markdown("---")
 st.markdown(f"**🏦 Bank Marketing AI System** | Powered by **{best_model_name}** | 8 Models Trained | Threshold: 20%")
-
