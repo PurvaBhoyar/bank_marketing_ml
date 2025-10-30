@@ -243,7 +243,7 @@ else:
         - Handles complex non-linear relationships
         """)
     
-    s
+    
 
     st.markdown("---")
     st.subheader("🥇 Model Rankings (by F1-Score)")
